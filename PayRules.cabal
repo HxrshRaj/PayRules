@@ -1,0 +1,34 @@
+cabal-version:      2.4
+name:               PayRules
+version:            0.1.0.0
+synopsis:           A pure, typed authorization rules engine for payment transactions.
+description:
+  Evaluates a transaction against a pipeline of composable, pure authorization
+  rules and returns an approve/decline decision together with a reasoning trail
+  (which rule fired and why).
+homepage:           https://github.com/harshraj/PayRules
+license:            MIT
+license-file:       LICENSE
+author:             Harsh Raj
+maintainer:         hraj15709@gmail.com
+build-type:         Simple
+extra-doc-files:    README.md
+tested-with:        GHC ==9.6.6
+
+common lang
+  default-language:   Haskell2010
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wno-name-shadowing
+
+library
+  import:           lang
+  hs-source-dirs:   src
+  exposed-modules:  PayRules.Money
+  build-depends:
+      base  >=4.14 && <5
+    , text  >=1.2  && <3

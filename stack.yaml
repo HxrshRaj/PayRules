@@ -1,0 +1,8 @@
+# Stack uses the hand-written PayRules.cabal as the source of truth.
+# The LTS snapshot pins every transitive dependency, so `stack build` /
+# `stack test` are reproducible on any machine and Stack provisions the
+# matching GHC itself. `cabal build` also works against the same .cabal file.
+snapshot: lts-22.28   # GHC 9.6.6
+
+packages:
+  - .
