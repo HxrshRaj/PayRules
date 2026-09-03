@@ -50,3 +50,17 @@ executable payrules
     , text
     , time
     , PayRules
+
+test-suite payrules-test
+  import:           lang
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Spec.hs
+  other-modules:    PayRules.Gen
+  build-depends:
+      base
+    , containers
+    , text
+    , time
+    , QuickCheck  >=2.14 && <2.16
+    , PayRules
