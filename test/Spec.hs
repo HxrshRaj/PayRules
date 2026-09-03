@@ -13,7 +13,7 @@ import qualified Data.Set        as Set
 import qualified Data.Text       as T
 import           Numeric.Natural (Natural)
 import           System.Exit     (exitFailure)
-import           Test.QuickCheck
+import           Test.QuickCheck hiding (scale)   -- 'scale' clashes with PayRules.Money.scale
 
 import           PayRules.Engine
 import           PayRules.Money

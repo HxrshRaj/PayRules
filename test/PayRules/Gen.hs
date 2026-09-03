@@ -54,7 +54,7 @@ instance Arbitrary MerchantId where
 
 -- | Money over any currency: an exact minor-unit count, positive or negative,
 -- shrinking toward zero.
-instance KnownCurrency c => Arbitrary (Money c) where
+instance Arbitrary (Money c) where
   arbitrary = fromMinorUnits <$> arbitrary
   shrink m  = fromMinorUnits <$> shrink (toMinorUnits m)
 
