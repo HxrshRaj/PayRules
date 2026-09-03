@@ -54,6 +54,7 @@ module PayRules.Money
   , MoneyError (..)
 
     -- * Exact arithmetic
+    -- $arith
   , zero
   , add
   , sub
@@ -139,6 +140,17 @@ newtype Money (c :: Currency) = Money Integer
 -- counterexamples; not meant to be @read@-able.
 instance KnownCurrency c => Show (Money c) where
   show = T.unpack . render
+
+-- | Same-currency amounts form a monoid under addition. This is the /safe/
+-- version of a @Num@ instance: @('<>')@ can only ever combine two amounts in
+-- the same currency (the phantom @c@ is shared), and it is genuinely
+-- associative with 'zero' as identity — the property suite checks the laws.
+-- Lets you @mconcat@ a batch of line items without reaching for a fold.
+instance Semigroup (Money c) where
+  (<>) = add
+
+instance Monoid (Money c) where
+  mempty = zero
 
 -- | Value-level recovery of the type-level 'Currency' tag. One instance per
 -- promoted constructor; this is the (hand-rolled) singleton that lets a rule
@@ -244,12 +256,19 @@ fromDecimal input = do
 
 -- ---------------------------------------------------------------------------
 -- Exact arithmetic
---
--- Every operation here is Integer arithmetic on minor units, so none of them
--- can round or (with Integer) overflow. The phantom @c@ on 'add' and 'sub'
--- forces both operands to the same currency: mixing is rejected by the type
--- checker, not by a runtime guard.
 -- ---------------------------------------------------------------------------
+
+-- $arith
+-- Every operation here is 'Integer' arithmetic on minor units, so none of them
+-- can round, and because 'Integer' is unbounded none can overflow: a billion
+-- additions do not drift. The phantom @c@ on 'add' and 'sub' forces both
+-- operands to the same currency, so @gbp \`add\` usd@ is rejected by the type
+-- checker rather than by a runtime guard you could forget to write.
+--
+-- The trade-off of 'Integer' over a fixed 'Int64' is that there is no natural
+-- ceiling; a production ledger would still want an explicit maximum-amount
+-- check at its edges. That belongs in a domain rule (see @PayRules.Rules@),
+-- not in the number type.
 
 zero :: Money c
 zero = Money 0
