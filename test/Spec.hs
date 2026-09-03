@@ -90,6 +90,22 @@ prop_allocateEqualWeightsAreFair m =
         let xs = map toMinorUnits parts
         in property (maximum xs - minimum xs <= 1)
 
+-- Even with unequal weights, every part is within one minor unit of its exact
+-- proportional share:  |part_i * totalWeight  -  total * weight_i|  <=  totalWeight.
+prop_allocateIsProportional
+  :: Money 'USD -> NonEmptyList (NonNegative Integer) -> Property
+prop_allocateIsProportional m (NonEmpty raw) =
+  case allocate m ws of
+    Left err    -> counterexample (show err) False
+    Right parts ->
+      let total = toMinorUnits m
+          w     = sum (map toInteger ws)
+      in property $ and
+           [ abs (toMinorUnits p * w - total * toInteger wi) <= w
+           | (p, wi) <- zip parts ws ]
+  where
+    ws = usableWeights raw
+
 -- ===========================================================================
 -- Money <-> text round trips
 -- ===========================================================================
@@ -218,6 +234,7 @@ main = do
     , check "allocate conserves the total"              prop_allocateConservesSum
     , check "allocate conserves the part count"         prop_allocateConservesCount
     , check "allocate spreads the remainder fairly"     prop_allocateEqualWeightsAreFair
+    , check "allocate is proportional to within 1 unit" prop_allocateIsProportional
     , check "renderAmount/fromDecimal round-trip (USD)" prop_amountRoundTripsUSD
     , check "renderAmount/fromDecimal round-trip (JPY)" prop_amountRoundTripsJPY
     , check "render/parseSomeMoney round-trip"          prop_parseSomeMoneyRoundTrips
