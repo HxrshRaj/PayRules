@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.hs text eol=lf
+*.cabal text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
