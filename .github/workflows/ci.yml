@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Stack
+        uses: haskell-actions/setup@v2
+        with:
+          enable-stack: true
+          stack-no-global: true
+
+      # Cache the Stack-managed GHC and the built snapshot packages.
+      - name: Cache ~/.stack
+        uses: actions/cache@v4
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-stack-home-${{ hashFiles('stack.yaml.lock', 'PayRules.cabal') }}
+          restore-keys: ${{ runner.os }}-stack-home-
+
+      # Cache this project's own build products, keyed on the sources.
+      - name: Cache .stack-work
+        uses: actions/cache@v4
+        with:
+          path: .stack-work
+          key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml.lock', 'PayRules.cabal', '**/*.hs') }}
+          restore-keys: ${{ runner.os }}-stack-work-
+
+      # -Werror in CI only: local builds warn, CI refuses to merge a warning.
+      - name: Build (warnings are errors)
+        run: stack build --test --no-run-tests --ghc-options=-Werror
+
+      - name: Run the property suite
+        run: stack test
