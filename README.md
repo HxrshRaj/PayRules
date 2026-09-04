@@ -37,6 +37,11 @@ stack exec payrules -- check     # read '|'-delimited transactions from stdin
 `cabal build` / `cabal test` also work — the `.cabal` file is hand-written and
 is the single source of truth; `stack.yaml` just points at it.
 
+**Prebuilt binaries** for Linux / macOS / Windows are attached to each
+[GitHub Release](https://github.com/HxrshRaj/PayRules/releases) (pushing a
+`v*` tag builds them). **API docs** (Haddock) are published to
+[hxrshraj.github.io/PayRules](https://hxrshraj.github.io/PayRules/).
+
 Example of `check` mode:
 
 ```

@@ -173,6 +173,8 @@ currencyOf _ = currencySing (Proxy @c)
 -- Errors
 -- ---------------------------------------------------------------------------
 
+-- | Everything that can go wrong when /building/ money from untrusted input.
+-- (Arithmetic never fails, so it is absent here.)
 data MoneyError
   = UnknownCurrency Text
     -- ^ 'parseCurrency' / 'parseSomeMoney' given a code we do not model.
@@ -265,7 +267,7 @@ fromDecimal input = do
 -- operands to the same currency, so @gbp \`add\` usd@ is rejected by the type
 -- checker rather than by a runtime guard you could forget to write.
 --
--- The trade-off of 'Integer' over a fixed 'Int64' is that there is no natural
+-- The trade-off of 'Integer' over a fixed @Int64@ is that there is no natural
 -- ceiling; a production ledger would still want an explicit maximum-amount
 -- check at its edges. That belongs in a domain rule (see @PayRules.Rules@),
 -- not in the number type.
