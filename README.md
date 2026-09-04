@@ -98,15 +98,17 @@ the demo.
 
 ### Deploy
 
-A multi-stage [`Dockerfile`](Dockerfile) builds a ~30 MB runtime image
-(Debian slim + the static-ish binary). [`render.yaml`](render.yaml) is a
-Render Blueprint — connect the repo at render.com and it builds the Dockerfile,
-injects `$PORT`, and health-checks `/healthz`; no secrets for a public repo.
-Any Docker host works too:
+CI builds the multi-stage [`Dockerfile`](Dockerfile) on every push and
+publishes the image to the GitHub Container Registry:
 
 ```
-docker build -t payrules . && docker run -p 8080:8080 payrules
+docker run -p 8080:8080 ghcr.io/hxrshraj/payrules:latest
 ```
+
+[`render.yaml`](render.yaml) is a Render Blueprint — connect the repo at
+render.com and it builds the Dockerfile, injects `$PORT`, and health-checks
+`/healthz`; no secrets needed for a public repo. Any other Docker host works
+the same way.
 
 ---
 
