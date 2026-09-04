@@ -3,7 +3,7 @@
 
 -- |
 -- Module      : PayRules.Rules
--- Description : The five authorization rules.
+-- Description : The six authorization rules.
 --
 -- Each rule is a pure function @'AuthContext' c -> 'Transaction' c ->
 -- 'RuleOutcome'@ wrapped with its name in a 'NamedRule'. Rules never look at
@@ -38,7 +38,7 @@ import           Data.Time  (diffUTCTime)
 import           PayRules.Money
 import           PayRules.Types
 
--- | The five rules in reporting order. Order does not affect the decision
+-- | The six rules in reporting order. Order does not affect the decision
 -- (the engine accumulates all violations); it only affects the order lines
 -- appear in the trail.
 defaultRules :: KnownCurrency c => [NamedRule c]
