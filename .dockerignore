@@ -1,0 +1,7 @@
+.git
+.github
+.stack-work
+dist
+_site
+*.hi
+*.o

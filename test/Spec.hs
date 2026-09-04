@@ -8,6 +8,7 @@
 module Main (main) where
 
 import           Control.Monad   (unless)
+import           Data.Aeson      (eitherDecode, encode)
 import           Data.List       (sort)
 import qualified Data.Set        as Set
 import qualified Data.Text       as T
@@ -18,7 +19,9 @@ import           Test.QuickCheck hiding (scale)   -- 'scale' clashes with PayRul
 import           PayRules.Engine
 import           PayRules.Money
 import           PayRules.Rules
+import           PayRules.Sample (demoContext)
 import           PayRules.Types
+import           PayRules.Wire   (AuthRequest (..), AuthResponse (..), authorize)
 
 import           PayRules.Gen    ()
 
@@ -243,6 +246,42 @@ prop_raisingLimitNeverAddsLimitViolation ctx0 txn (NonNegative delta) =
     rulesOf = map violationRule . violations
 
 -- ===========================================================================
+-- HTTP layer (PayRules.Wire) -- the /authorize endpoint's pure core
+-- ===========================================================================
+
+-- The JSON request equivalent of a typed transaction (currency fixed to USD,
+-- amount as exact minor units, category via its Show name).
+requestOf :: Transaction 'USD -> AuthRequest
+requestOf txn = AuthRequest
+  { reqAccount          = unAccountId (txnAccount txn)
+  , reqCurrency         = "USD"
+  , reqMinorUnits       = toMinorUnits (txnAmount txn)
+  , reqMerchantId       = unMerchantId (merchantId (txnMerchant txn))
+  , reqMerchantName     = merchantName (txnMerchant txn)
+  , reqMerchantCategory = T.pack (show (merchantCategory (txnMerchant txn)))
+  , reqTimestamp        = Just (txnTimestamp txn)
+  }
+
+-- Going through the JSON request type reaches the same decision as calling the
+-- engine directly on the equivalent transaction (both against demoContext).
+prop_apiMatchesEngine :: Transaction 'USD -> Property
+prop_apiMatchesEngine txn =
+  case authorize (txnTimestamp txn) (requestOf txn) of
+    Left e     -> counterexample (T.unpack e) False
+    Right resp -> respDecision resp === engineWord
+  where
+    engineWord =
+      if decision (evaluate defaultRules (demoContext :: AuthContext 'USD) txn) == Approved
+        then "approved" else "declined"
+
+-- The response survives a JSON encode/decode round trip.
+prop_authResponseJsonRoundTrips :: Transaction 'USD -> Property
+prop_authResponseJsonRoundTrips txn =
+  case authorize (txnTimestamp txn) (requestOf txn) of
+    Left e     -> counterexample (T.unpack e) False
+    Right resp -> eitherDecode (encode resp) === Right resp
+
+-- ===========================================================================
 -- Harness
 -- ===========================================================================
 
@@ -278,6 +317,8 @@ main = do
     , check "amount below the ceiling never trips it"    prop_belowCeilingHasNoCeilingViolation
     , check "raising the ceiling never adds a ceiling violation"
                                                         prop_raisingCeilingNeverAddsCeilingViolation
+    , check "the HTTP layer reaches the engine's decision" prop_apiMatchesEngine
+    , check "the HTTP response JSON round-trips"         prop_authResponseJsonRoundTrips
     ]
   unless (and results) exitFailure
 

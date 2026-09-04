@@ -1,0 +1,12 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Connect this repo at dashboard.render.com (New -> Blueprint). Render builds
+# the Dockerfile, injects $PORT (the server reads it), and health-checks
+# /healthz. No secrets needed for a public repo.
+services:
+  - type: web
+    name: payrules
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true

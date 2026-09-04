@@ -29,7 +29,7 @@ Stack provisions that exact GHC itself, so a clean machine needs nothing else.
 
 ```
 stack build      # first run also fetches GHC 9.6.6
-stack test       # runs the QuickCheck property suite (27 properties)
+stack test       # runs the QuickCheck property suite (29 properties)
 stack exec payrules -- demo      # built-in scenarios, one per rule
 stack exec payrules -- check     # read '|'-delimited transactions from stdin
 ```
@@ -51,6 +51,61 @@ Decision: Declined
   ok      SpendingLimit
   DECLINE CurrencyAllowed — GBP is not an allowed currency for this account (allowed: EUR, USD)
   ...
+```
+
+---
+
+## HTTP API
+
+The same engine behind a `servant` + `warp` server (`payrules-server`), so a
+transaction can be authorized over HTTP:
+
+```
+PORT=8080 stack exec payrules-server
+```
+
+| Endpoint | |
+|---|---|
+| `GET /healthz` | `{"status":"ok"}` |
+| `POST /authorize` | body below → decision + reasoning trail |
+
+```
+$ curl -s localhost:8080/authorize -H 'content-type: application/json' -d '
+  { "account": "acc-001",
+    "amount": { "currency": "GBP", "minorUnits": 1000 },
+    "merchant": { "id": "m-x", "name": "Corner Shop", "category": "Grocery" } }'
+
+{ "decision": "declined",
+  "violations": [ { "rule": "CurrencyAllowed",
+                    "reason": "GBP is not an allowed currency for this account (allowed: EUR, USD)" } ],
+  "trail": [ { "rule": "SpendingLimit", "outcome": "ok" }, … ] }
+```
+
+Two things this demonstrates:
+
+* **The runtime → type-level currency bridge.** The request's currency is just
+  a string; `PayRules.Wire` runs it through `withKnownCurrency` so the body is
+  evaluated at the correct `Money c` type — the same mechanism the CLI's
+  `check` mode uses. A code it doesn't model is a `400`, not a crash.
+* **The engine stays dependency-free.** `aeson` is confined to `PayRules.Wire`
+  and the server executable; `servant`/`warp` to the executable alone. The
+  library that does the actual authorization still depends only on `base`,
+  `text`, `time`, `containers`.
+
+The request is evaluated against the sample account (`demoContext`), matching
+the CLI — sending a full account/policy context per request is out of scope for
+the demo.
+
+### Deploy
+
+A multi-stage [`Dockerfile`](Dockerfile) builds a ~30 MB runtime image
+(Debian slim + the static-ish binary). [`render.yaml`](render.yaml) is a
+Render Blueprint — connect the repo at render.com and it builds the Dockerfile,
+injects `$PORT`, and health-checks `/healthz`; no secrets for a public repo.
+Any Docker host works too:
+
+```
+docker build -t payrules . && docker run -p 8080:8080 payrules
 ```
 
 ---
@@ -166,15 +221,17 @@ src/PayRules/
   Rules.hs     the six rules + defaultRules
   Engine.hs    evaluate (accumulate-all) + explain (the trail printer)
   Sample.hs    a worked account + the demo scenarios (scaffolding, not engine)
+  Wire.hs      JSON shapes + the pure core of POST /authorize (only this needs aeson)
 app/Main.hs    thin CLI: demo mode / stdin check mode
-test/          Spec.hs (27 properties) + PayRules/Gen.hs (Arbitrary instances)
+server/Main.hs thin HTTP server: servant + warp over PayRules.Wire
+test/          Spec.hs (29 properties) + PayRules/Gen.hs (Arbitrary instances)
 ```
 
 ---
 
 ## Property-based testing — `test/Spec.hs`
 
-27 properties, every one driven by random inputs through `Arbitrary` instances
+29 properties, every one driven by random inputs through `Arbitrary` instances
 in `PayRules.Gen` (generators draw ids from small pools on purpose, so
 collisions — repeat merchants, blocklisted accounts — actually occur). A
 representative slice:

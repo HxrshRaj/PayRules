@@ -13,6 +13,7 @@ module PayRules.Sample
   ( demoContext
   , demoResults
   , evaluateLine
+  , parseMerchantCategory
   ) where
 
 import           Data.Bifunctor (first)
@@ -135,7 +136,7 @@ evaluateLine now raw =
   case map T.strip (T.splitOn "|" raw) of
     [acct, amountText, mid, mname, catText] -> do
       some <- first (T.pack . show) (parseSomeMoney amountText)
-      cat  <- parseCategory catText
+      cat  <- parseMerchantCategory catText
       let merch = Merchant (MerchantId mid) mname cat
       withSomeMoney some (\amount ->
         Right (evaluate defaultRules demoContext
@@ -143,8 +144,10 @@ evaluateLine now raw =
     _ -> Left
       "expected 5 '|'-separated fields: account | CUR amount | merchantId | merchantName | category"
 
-parseCategory :: Text -> Either Text MerchantCategory
-parseCategory t =
+-- | Parse a 'MerchantCategory' from its name, case-insensitively. Shared by
+-- the CLI's @check@ mode and the HTTP API ("PayRules.Wire").
+parseMerchantCategory :: Text -> Either Text MerchantCategory
+parseMerchantCategory t =
   case T.toLower (T.strip t) of
     "grocery"       -> Right Grocery
     "travel"        -> Right Travel
