@@ -6,7 +6,7 @@ description:
   Evaluates a transaction against a pipeline of composable, pure authorization
   rules and returns an approve/decline decision together with a reasoning trail
   (which rule fired and why).
-homepage:           https://github.com/harshraj/PayRules
+homepage:           https://github.com/HxrshRaj/PayRules
 license:            MIT
 license-file:       LICENSE
 author:             Harsh Raj

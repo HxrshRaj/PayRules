@@ -1,5 +1,7 @@
 # PayRules
 
+[![CI](https://github.com/HxrshRaj/PayRules/actions/workflows/ci.yml/badge.svg)](https://github.com/HxrshRaj/PayRules/actions/workflows/ci.yml)
+
 A pure, typed authorization rules engine for payment transactions, written in
 Haskell.
 
