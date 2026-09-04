@@ -18,15 +18,30 @@ import           Text.Read               (readMaybe)
 import           PayRules.Wire           (AuthRequest, AuthResponse, authorize)
 
 type API =
-       "healthz"   :> Get  '[JSON] Value
+       Get '[JSON] Value                                   -- GET /  : an index
+  :<|> "healthz"   :> Get  '[JSON] Value
   :<|> "authorize" :> ReqBody '[JSON] AuthRequest :> Post '[JSON] AuthResponse
 
 api :: Proxy API
 api = Proxy
 
 server :: Server API
-server = healthz :<|> authorizeHandler
+server = index :<|> healthz :<|> authorizeHandler
   where
+    index :: Handler Value
+    index = pure $ object
+      [ "service"   .= ("PayRules — a typed payment authorization engine" :: String)
+      , "endpoints" .= object
+          [ "GET /healthz"    .= ("liveness check" :: String)
+          , "POST /authorize" .=
+              ("{ account, amount: { currency, minorUnits }, \
+               \merchant: { id, name, category }, timestamp? } \
+               \-> decision + reasoning trail" :: String)
+          ]
+      , "docs"   .= ("https://hxrshraj.github.io/PayRules/" :: String)
+      , "source" .= ("https://github.com/HxrshRaj/PayRules" :: String)
+      ]
+
     healthz :: Handler Value
     healthz = pure (object ["status" .= ("ok" :: String)])
 
