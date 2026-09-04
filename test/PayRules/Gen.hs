@@ -115,3 +115,4 @@ instance KnownCurrency c => Arbitrary (AuthContext c) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary   -- ctxAmountCeiling

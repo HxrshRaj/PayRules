@@ -61,6 +61,7 @@ demoContext = AuthContext
       { blockedMerchants = Set.fromList [MerchantId "mch-block"]
       , blockedAccounts  = Set.fromList [AccountId "acc-999"]
       }
+  , ctxAmountCeiling = lit 1000000 0   -- 1,000,000.00: a backstop far above the limit
   }
 
 -- ---------------------------------------------------------------------------
@@ -111,6 +112,8 @@ demoResults =
     , evaluate defaultRules ctxUSD (usdTxn "t6" mBlocked 20 0 (at 100004)) )
   , ( "blocklisted account AND over the limit -> declined, two reasons"
     , evaluate defaultRules ctxUSD (usdTxnFor "acc-999" "t7" mCoffee 5000 0 (at 100005)) )
+  , ( "amount past the hard ceiling -> declined by limit AND ceiling"
+    , evaluate defaultRules ctxUSD (usdTxn "t8" mCoffee 9000000 0 (at 100006)) )
   ]
   where
     ctxUSD = demoContext :: AuthContext 'USD

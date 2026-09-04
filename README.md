@@ -27,7 +27,7 @@ Stack provisions that exact GHC itself, so a clean machine needs nothing else.
 
 ```
 stack build      # first run also fetches GHC 9.6.6
-stack test       # runs the QuickCheck property suite (24 properties)
+stack test       # runs the QuickCheck property suite (27 properties)
 stack exec payrules -- demo      # built-in scenarios, one per rule
 stack exec payrules -- check     # read '|'-delimited transactions from stdin
 ```
@@ -123,7 +123,8 @@ the CLI's `check` mode parses `USD 800.00` at runtime and evaluates it at type
 
 The one honest trade-off: `Integer` has no ceiling. A production ledger still
 wants a maximum-amount check — but that is a *domain rule*, not a property of the
-number type, so it belongs in `PayRules.Rules`, not in `Money`.
+number type, so it lives in `PayRules.Rules` as `amountCeilingRule` (backed by
+`ctxAmountCeiling`), not in `Money`.
 
 ### 2. Rules are pure functions; the engine accumulates
 
@@ -138,11 +139,12 @@ human. Because the rules are independent and pure, `evaluate` is a
 deterministic function of `(rules, context, transaction)` and does not depend on
 the order of the rule list — both facts are asserted as properties.
 
-### 3. The five rules — `src/PayRules/Rules.hs`
+### 3. The six rules — `src/PayRules/Rules.hs`
 
 | Rule | Declines when | Notes |
 |---|---|---|
 | `SpendingLimit` | `amount > accountPerTxnLimit` | both sides are `Money c` for the same `c` — no currency handling in the comparison |
+| `AmountCeiling` | `amount >= ctxAmountCeiling` | absolute backstop for the unbounded `Integer`; `>=` (ceiling itself is out of range), unlike the per-txn limit's `>` |
 | `CurrencyAllowed` | txn currency ∉ account's allowed set | currency recovered from the type via `currencyOf` |
 | `Velocity` | ≥ N prior transactions within the time window before this one | needs transaction history; window measured back from `txnTimestamp` |
 | `FraudPattern` | amount is large **and** round **and** the merchant is first-seen in history | any one alone is unremarkable; together they are the card-testing / bust-out shape |
@@ -154,18 +156,18 @@ the order of the rule list — both facts are asserted as properties.
 src/PayRules/
   Money.hs     typed money: currency, exact arithmetic, allocate, SomeMoney
   Types.hs     Transaction / Account / AuthContext, rule vocabulary
-  Rules.hs     the five rules + defaultRules
+  Rules.hs     the six rules + defaultRules
   Engine.hs    evaluate (accumulate-all) + explain (the trail printer)
   Sample.hs    a worked account + the demo scenarios (scaffolding, not engine)
 app/Main.hs    thin CLI: demo mode / stdin check mode
-test/          Spec.hs (24 properties) + PayRules/Gen.hs (Arbitrary instances)
+test/          Spec.hs (27 properties) + PayRules/Gen.hs (Arbitrary instances)
 ```
 
 ---
 
 ## Property-based testing — `test/Spec.hs`
 
-24 properties, every one driven by random inputs through `Arbitrary` instances
+27 properties, every one driven by random inputs through `Arbitrary` instances
 in `PayRules.Gen` (generators draw ids from small pools on purpose, so
 collisions — repeat merchants, blocklisted accounts — actually occur). A
 representative slice:
@@ -185,7 +187,8 @@ representative slice:
   decision, same set of violated rules under a random shuffle of the rule list);
 * **metamorphic:** blocklisting the transaction's account forces a decline;
   tightening the blocklist never turns a decline into an approval; raising the
-  per-transaction limit never *adds* a spending-limit violation.
+  per-transaction limit (or the hard ceiling) never *adds* the corresponding
+  violation; an amount at or above the ceiling is always declined.
 
 ### What the type checker caught, and what the properties caught
 

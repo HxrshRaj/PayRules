@@ -19,6 +19,7 @@ module PayRules.Rules
 
     -- * Individual rules
   , spendingLimitRule
+  , amountCeilingRule
   , currencyAllowedRule
   , velocityRule
   , fraudPatternRule
@@ -43,6 +44,7 @@ import           PayRules.Types
 defaultRules :: KnownCurrency c => [NamedRule c]
 defaultRules =
   [ spendingLimitRule
+  , amountCeilingRule
   , currencyAllowedRule
   , velocityRule
   , fraudPatternRule
@@ -64,6 +66,26 @@ spendingLimitRule = NamedRule SpendingLimit $ \ctx txn ->
        then fed SpendingLimit $
               "amount " <> render amount
                 <> " exceeds the per-transaction limit of " <> render limit
+       else Pass
+
+-- ---------------------------------------------------------------------------
+-- 1b. Hard amount ceiling
+-- ---------------------------------------------------------------------------
+
+-- | Decline when the amount is at or above the absolute ceiling in
+-- 'ctxAmountCeiling'. This is the ledger-edge maximum the 'Money' type does not
+-- encode ('Integer' is unbounded); it is a backstop that catches an amount even
+-- if the per-account 'spendingLimitRule' is misconfigured or absent. Note the
+-- comparison is @>=@ (the ceiling itself is out of range), unlike the
+-- per-transaction limit's @>@.
+amountCeilingRule :: KnownCurrency c => NamedRule c
+amountCeilingRule = NamedRule AmountCeiling $ \ctx txn ->
+  let ceilingAmount = ctxAmountCeiling ctx
+      amount        = txnAmount txn
+  in if amount >= ceilingAmount
+       then fed AmountCeiling $
+              "amount " <> render amount
+                <> " is at or above the hard ceiling of " <> render ceilingAmount
        else Pass
 
 -- ---------------------------------------------------------------------------

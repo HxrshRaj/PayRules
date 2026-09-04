@@ -202,6 +202,31 @@ prop_tighteningNeverApproves ctx0 txn =
                                       (blockedMerchants bl) } }
     tighter = evalUSD ctx' txn
 
+-- The hard ceiling: an amount at or above ctxAmountCeiling is always declined.
+prop_atOrAboveCeilingIsDeclined
+  :: AuthContext 'USD -> Transaction 'USD -> Bool
+prop_atOrAboveCeilingIsDeclined ctx0 txn =
+  decision (evalUSD (ctx0 { ctxAmountCeiling = txnAmount txn }) txn) == Declined
+
+-- ...and an amount strictly below the ceiling never triggers the ceiling rule.
+prop_belowCeilingHasNoCeilingViolation
+  :: AuthContext 'USD -> Transaction 'USD -> Bool
+prop_belowCeilingHasNoCeilingViolation ctx0 txn =
+  let ctx = ctx0 { ctxAmountCeiling = txnAmount txn `add` fromMinorUnits 1 }
+  in AmountCeiling `notElem` map violationRule (violations (evalUSD ctx txn))
+
+-- Metamorphic: raising the ceiling can never *add* an AmountCeiling violation.
+prop_raisingCeilingNeverAddsCeilingViolation
+  :: AuthContext 'USD -> Transaction 'USD -> NonNegative Integer -> Bool
+prop_raisingCeilingNeverAddsCeilingViolation ctx0 txn (NonNegative delta) =
+  not (bumped && not base)
+  where
+    base   = AmountCeiling `elem` rulesOf (evalUSD ctx0 txn)
+    bumped = AmountCeiling `elem` rulesOf (evalUSD ctx' txn)
+    ctx'   = ctx0 { ctxAmountCeiling =
+                      ctxAmountCeiling ctx0 `add` fromMinorUnits delta }
+    rulesOf = map violationRule . violations
+
 -- Metamorphic: raising the per-transaction limit can never *add* a
 -- spending-limit violation.
 prop_raisingLimitNeverAddsLimitViolation
@@ -249,6 +274,10 @@ main = do
     , check "tightening never turns decline into approve" prop_tighteningNeverApproves
     , check "raising the limit never adds a limit violation"
                                                         prop_raisingLimitNeverAddsLimitViolation
+    , check "amount at/above the hard ceiling is declined" prop_atOrAboveCeilingIsDeclined
+    , check "amount below the ceiling never trips it"    prop_belowCeilingHasNoCeilingViolation
+    , check "raising the ceiling never adds a ceiling violation"
+                                                        prop_raisingCeilingNeverAddsCeilingViolation
     ]
   unless (and results) exitFailure
 

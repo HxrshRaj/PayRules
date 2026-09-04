@@ -152,6 +152,11 @@ data AuthContext (c :: Currency) = AuthContext
   , ctxVelocity  :: VelocityPolicy
   , ctxFraud     :: FraudPolicy c
   , ctxBlocklist :: Blocklist
+  , ctxAmountCeiling :: Money c
+    -- ^ Absolute hard cap. Amounts at or above it are refused regardless of
+    -- the per-account limit. This is the ledger-edge maximum that the 'Money'
+    -- type deliberately does not encode ('Integer' is unbounded); it is a
+    -- backstop, normally set far above any real 'accountPerTxnLimit'.
   }
   deriving (Eq, Show)
 
@@ -162,6 +167,7 @@ data AuthContext (c :: Currency) = AuthContext
 -- | The identity of each rule, for the reasoning trail.
 data RuleName
   = SpendingLimit
+  | AmountCeiling
   | CurrencyAllowed
   | Velocity
   | FraudPattern
