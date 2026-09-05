@@ -55,6 +55,7 @@ jobs:
           docker run -d --name payrules -p 8080:8080 "$IMAGE"
           for _ in $(seq 1 30); do curl -sf localhost:8080/healthz && break || sleep 1; done
           echo
+          curl -sf localhost:8080/ | grep -q '<html'
           curl -sf -X POST localhost:8080/authorize -H 'content-type: application/json' \
             -d '{"account":"acc-001","amount":{"currency":"USD","minorUnits":4200},"merchant":{"id":"m","name":"Shop","category":"Grocery"}}' \
             | tee /tmp/r.json

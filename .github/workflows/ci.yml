@@ -32,12 +32,14 @@ jobs:
           key: ${{ runner.os }}-stack-home-${{ hashFiles('stack.yaml.lock', 'PayRules.cabal') }}
           restore-keys: ${{ runner.os }}-stack-home-
 
-      # Cache this project's own build products, keyed on the sources.
+      # Cache this project's own build products, keyed on the sources. Includes
+      # server/static/** because it's embedded into the binary at compile time
+      # (Template Haskell) -- a change there doesn't touch any .hs file.
       - name: Cache .stack-work
         uses: actions/cache@v4
         with:
           path: .stack-work
-          key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml.lock', 'PayRules.cabal', '**/*.hs') }}
+          key: ${{ runner.os }}-stack-work-${{ hashFiles('stack.yaml.lock', 'PayRules.cabal', '**/*.hs', 'server/static/**') }}
           restore-keys: ${{ runner.os }}-stack-work-
 
       # -Werror in CI only: local builds warn, CI refuses to merge a warning.
@@ -47,12 +49,14 @@ jobs:
       - name: Run the property suite
         run: stack test
 
-      - name: Smoke-test the HTTP API
+      - name: Smoke-test the HTTP API and demo UI
         run: |
           PORT=8080 stack exec payrules-server &
           pid=$!
           for i in $(seq 1 30); do curl -sf localhost:8080/healthz && break || sleep 1; done
           echo
+          curl -sf localhost:8080/ | tee /tmp/index.html | grep -q '<html'
+          grep -qi 'text/html' <(curl -sfI localhost:8080/)
           curl -sf -X POST localhost:8080/authorize \
             -H 'content-type: application/json' \
             -d '{"account":"acc-001","amount":{"currency":"USD","minorUnits":4200},"merchant":{"id":"m-x","name":"Corner Shop","category":"Grocery"}}' \

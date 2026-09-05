@@ -9,6 +9,11 @@ Given a transaction and an account context, PayRules runs a pipeline of
 composable authorization rules and returns an **approve / decline** decision
 together with a **reasoning trail** — which rule fired, and why.
 
+**Live demo:** [payrules.onrender.com](https://payrules.onrender.com) — click
+one of the six example transactions to see a real decision from the real
+engine (free tier; the first request after a while sleeps and takes ~50s to
+wake up).
+
 ```
 $ stack exec payrules -- demo
 ### round amount to a first-seen merchant -> declined
@@ -55,10 +60,9 @@ Decision: Declined
 
 ---
 
-## HTTP API
+## HTTP API and demo UI
 
-The same engine behind a `servant` + `warp` server (`payrules-server`), so a
-transaction can be authorized over HTTP:
+The same engine behind a `servant` + `warp` server (`payrules-server`):
 
 ```
 PORT=8080 stack exec payrules-server
@@ -66,8 +70,17 @@ PORT=8080 stack exec payrules-server
 
 | Endpoint | |
 |---|---|
+| `GET /` | the demo page below |
 | `GET /healthz` | `{"status":"ok"}` |
 | `POST /authorize` | body below → decision + reasoning trail |
+
+**`GET /`** is a single self-contained HTML page (`server/static/index.html`,
+embedded into the binary at compile time — no separate assets to ship) that
+calls this same `/authorize` endpoint from the browser: a form, six one-click
+example transactions (one per rule, plus a clean approve), and the result
+rendered as a decision badge and a pass/fail row per rule — nothing on the
+page is mocked. It is genuinely additive: it does not change `/healthz` or
+`/authorize`, and it does not touch `PayRules.Engine`/`Rules`/`Money` at all.
 
 ```
 $ curl -s localhost:8080/authorize -H 'content-type: application/json' -d '
@@ -225,7 +238,8 @@ src/PayRules/
   Sample.hs    a worked account + the demo scenarios (scaffolding, not engine)
   Wire.hs      JSON shapes + the pure core of POST /authorize (only this needs aeson)
 app/Main.hs    thin CLI: demo mode / stdin check mode
-server/Main.hs thin HTTP server: servant + warp over PayRules.Wire
+server/Main.hs       thin HTTP server: servant + warp over PayRules.Wire
+server/static/index.html  the demo page (embedded into the binary at compile time)
 test/          Spec.hs (29 properties) + PayRules/Gen.hs (Arbitrary instances)
 ```
 
