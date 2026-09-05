@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PayRules — live demo</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --border: #e3e6ee;
+    --text: #1c1f2b;
+    --muted: #6b7185;
+    --accent: #4338ca;
+    --accent-ink: #ffffff;
+    --ok: #0f8a5f;
+    --ok-bg: #e9f7f1;
+    --bad: #b3261e;
+    --bad-bg: #fdecec;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    padding: 28px 24px 8px;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  header h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.01em; }
+  header .tagline { margin: 0 0 10px; color: var(--muted); }
+  header nav a { color: var(--accent); text-decoration: none; font-size: 13px; }
+  header nav a:hover { text-decoration: underline; }
+  header nav span.sep { color: var(--border); margin: 0 8px; }
+
+  main {
+    max-width: 980px;
+    margin: 12px auto 40px;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .panel h2 { margin: 0 0 14px; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+
+  .examples { margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .examples-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .examples button {
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .examples button:hover { border-color: var(--accent); color: var(--accent); }
+
+  form { display: flex; flex-direction: column; gap: 12px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  label small { font-weight: normal; color: var(--muted); }
+  input, select {
+    font: inherit;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  button.primary {
+    margin-top: 4px;
+    font: inherit;
+    font-weight: 600;
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-ink);
+    cursor: pointer;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.primary:disabled { opacity: .6; cursor: default; }
+
+  .empty { color: var(--muted); font-size: 14px; padding: 12px 2px; }
+
+  .badge {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: .02em;
+    padding: 8px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+  }
+  .badge.approved { background: var(--ok-bg); color: var(--ok); }
+  .badge.declined { background: var(--bad-bg); color: var(--bad); }
+
+  #trail { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  #trail li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  #trail li .mark { font-weight: 700; width: 16px; flex: none; }
+  #trail li.ok .mark { color: var(--ok); }
+  #trail li.decline .mark { color: var(--bad); }
+  #trail li .rule { font-weight: 600; font-family: var(--mono); font-size: 13px; }
+  #trail li .reason { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  details.raw { margin-top: 14px; }
+  details.raw summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+  details.raw pre {
+    margin-top: 8px;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .error {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--bad-bg);
+    color: var(--bad);
+    font-size: 13px;
+    margin-top: 12px;
+  }
+
+  footer {
+    max-width: 980px;
+    margin: 0 auto 40px;
+    padding: 0 24px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  footer code { font-family: var(--mono); background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PayRules</h1>
+  <p class="tagline">A pure, typed payment-authorization engine, written in Haskell — this page calls the live API.</p>
+  <nav>
+    <a href="https://hxrshraj.github.io/PayRules/">API docs</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/HxrshRaj/PayRules">source</a>
+    <span class="sep">·</span>
+    <a href="/healthz">/healthz</a>
+  </nav>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Authorize a transaction</h2>
+
+    <div class="examples">
+      <span class="examples-label">Try:</span>
+      <button type="button" data-example="approved">Approved</button>
+      <button type="button" data-example="limit">Over limit</button>
+      <button type="button" data-example="currency">Wrong currency</button>
+      <button type="button" data-example="velocity">Too fast</button>
+      <button type="button" data-example="fraud">Fraud pattern</button>
+      <button type="button" data-example="blocklist">Blocklisted</button>
+    </div>
+
+    <form id="txn-form">
+      <label>Account ID
+        <input name="account" value="acc-001" required>
+      </label>
+
+      <div class="row">
+        <label>Amount
+          <input name="amount" inputmode="decimal" value="42.50" required>
+        </label>
+        <label>Currency
+          <select name="currency">
+            <option>USD</option>
+            <option>EUR</option>
+            <option>GBP</option>
+            <option>INR</option>
+            <option>JPY</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="row2">
+        <label>Merchant ID
+          <input name="merchantId" value="mch-coffee" required>
+        </label>
+        <label>Merchant name
+          <input name="merchantName" value="Blue Bottle" required>
+        </label>
+      </div>
+
+      <label>Category
+        <select name="category">
+          <option>Grocery</option>
+          <option>Travel</option>
+          <option>Electronics</option>
+          <option selected>Entertainment</option>
+          <option>Gambling</option>
+          <option value="CashAdvance">Cash advance</option>
+          <option>Other</option>
+        </select>
+      </label>
+
+      <label>Timestamp <small>(optional, ISO&nbsp;8601 — blank uses the server's clock)</small>
+        <input name="timestamp" placeholder="2026-06-01T00:00:55Z">
+      </label>
+
+      <button type="submit" class="primary" id="submit-btn">Authorize</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Result</h2>
+    <div id="result-empty" class="empty">Submit a transaction — or click one of the examples — to see the decision.</div>
+    <div id="result" hidden>
+      <span id="decision-badge" class="badge"></span>
+      <ol id="trail"></ol>
+      <details class="raw">
+        <summary>Raw JSON</summary>
+        <pre id="raw-json"></pre>
+      </details>
+    </div>
+    <div id="error" class="error" hidden></div>
+  </section>
+</main>
+
+<footer>
+  This UI is a static page calling <code>POST /authorize</code> on this same server — nothing here is mocked.
+  The engine (<code>PayRules.Engine</code> / <code>PayRules.Rules</code>) is unmodified by it.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var EXPONENT = { USD: 2, EUR: 2, GBP: 2, INR: 2, JPY: 0 };
+
+  var EXAMPLES = {
+    approved:  { account: "acc-001", amount: "42.50",   currency: "USD", merchantId: "mch-coffee",  merchantName: "Blue Bottle",    category: "Entertainment", timestamp: "" },
+    limit:     { account: "acc-001", amount: "5000.00", currency: "USD", merchantId: "mch-grocery",  merchantName: "Whole Foods",    category: "Grocery",       timestamp: "" },
+    currency:  { account: "acc-001", amount: "10.00",   currency: "GBP", merchantId: "mch-coffee",  merchantName: "Blue Bottle",    category: "Entertainment", timestamp: "" },
+    velocity:  { account: "acc-001", amount: "12.00",   currency: "USD", merchantId: "mch-coffee",  merchantName: "Blue Bottle",    category: "Entertainment", timestamp: "2026-06-01T00:00:55Z" },
+    fraud:     { account: "acc-001", amount: "800.00",  currency: "USD", merchantId: "mch-new-guy", merchantName: "Unknown Store",  category: "Other",         timestamp: "" },
+    blocklist: { account: "acc-001", amount: "20.00",   currency: "USD", merchantId: "mch-block",   merchantName: "QuickCash Ltd",  category: "CashAdvance",   timestamp: "" }
+  };
+
+  var form         = document.getElementById("txn-form");
+  var submitBtn    = document.getElementById("submit-btn");
+  var resultEmpty  = document.getElementById("result-empty");
+  var resultBox    = document.getElementById("result");
+  var badge        = document.getElementById("decision-badge");
+  var trailList    = document.getElementById("trail");
+  var rawJson      = document.getElementById("raw-json");
+  var errorBox     = document.getElementById("error");
+
+  // Exact-integer decimal -> minor units, mirroring PayRules.Money.fromDecimal:
+  // refuses more fractional digits than the currency allows rather than rounding.
+  function amountToMinorUnits(raw, currency) {
+    var exp = EXPONENT[currency];
+    var s = String(raw).trim();
+    var neg = s[0] === "-";
+    if (neg || s[0] === "+") s = s.slice(1);
+    var parts = s.split(".");
+    if (parts.length > 2) throw new Error("malformed amount: " + raw);
+    var intPart = parts[0] || "0";
+    var fracPart = parts[1] || "";
+    if (!/^\d*$/.test(intPart) || !/^\d*$/.test(fracPart)) throw new Error("amount must be numeric");
+    if (fracPart.length > exp) {
+      throw new Error(currency + " allows at most " + exp + " decimal place" + (exp === 1 ? "" : "s") + ", got “" + raw + "”");
+    }
+    while (fracPart.length < exp) fracPart += "0";
+    var digits = (intPart + fracPart).replace(/^0+(?=\d)/, "");
+    var n = Number(digits);
+    if (!Number.isSafeInteger(n)) throw new Error("amount too large for this demo");
+    return neg ? -n : n;
+  }
+
+  function fillForm(ex) {
+    form.account.value = ex.account;
+    form.amount.value = ex.amount;
+    form.currency.value = ex.currency;
+    form.merchantId.value = ex.merchantId;
+    form.merchantName.value = ex.merchantName;
+    form.category.value = ex.category;
+    form.timestamp.value = ex.timestamp;
+  }
+
+  document.querySelectorAll(".examples button").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      fillForm(EXAMPLES[btn.dataset.example]);
+      form.requestSubmit();
+    });
+  });
+
+  function showError(message) {
+    resultBox.hidden = true;
+    resultEmpty.hidden = true;
+    errorBox.hidden = false;
+    errorBox.textContent = message;
+  }
+
+  function renderResult(data) {
+    errorBox.hidden = true;
+    resultEmpty.hidden = true;
+    resultBox.hidden = false;
+
+    var approved = data.decision === "approved";
+    badge.textContent = approved ? "✓ APPROVED" : "✗ DECLINED";
+    badge.className = "badge " + (approved ? "approved" : "declined");
+
+    var reasons = {};
+    (data.violations || []).forEach(function (v) { reasons[v.rule] = v.reason; });
+
+    trailList.innerHTML = "";
+    (data.trail || []).forEach(function (step) {
+      var ok = step.outcome === "ok";
+      var li = document.createElement("li");
+      li.className = ok ? "ok" : "decline";
+      var reasonHtml = ok ? "" : '<span class="reason"></span>';
+      li.innerHTML =
+        '<span class="mark">' + (ok ? "✓" : "✗") + '</span>' +
+        '<span><span class="rule"></span>' + reasonHtml + '</span>';
+      li.querySelector(".rule").textContent = step.rule;
+      if (!ok) li.querySelector(".reason").textContent = reasons[step.rule] || "declined";
+      trailList.appendChild(li);
+    });
+
+    rawJson.textContent = JSON.stringify(data, null, 2);
+  }
+
+  form.addEventListener("submit", function (evt) {
+    evt.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Authorizing…";
+
+    var payload;
+    try {
+      payload = {
+        account: form.account.value,
+        amount: {
+          currency: form.currency.value,
+          minorUnits: amountToMinorUnits(form.amount.value, form.currency.value)
+        },
+        merchant: {
+          id: form.merchantId.value,
+          name: form.merchantName.value,
+          category: form.category.value
+        }
+      };
+      if (form.timestamp.value.trim()) payload.timestamp = form.timestamp.value.trim();
+    } catch (e) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Authorize";
+      showError(e.message);
+      return;
+    }
+
+    fetch("/authorize", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        return res.json().then(function (body) { return { ok: res.ok, body: body }; });
+      })
+      .then(function (r) {
+        if (r.ok) renderResult(r.body);
+        else showError(r.body && r.body.error ? r.body.error : "request failed");
+      })
+      .catch(function (err) {
+        showError("could not reach the API: " + err.message);
+      })
+      .finally(function () {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Authorize";
+      });
+  });
+})();
+</script>
+
+</body>
+</html>
